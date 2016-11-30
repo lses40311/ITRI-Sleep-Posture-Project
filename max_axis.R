@@ -1,25 +1,16 @@
 # return a list with the dominating axis an its value
 
 max_axis = function(x,y,z){
-    if(abs(x) > abs(y) ){
-      if(abs(x) > abs(z)){
-        max = 1
-        winning_point = x
-      }
-      else{
-        max = 3
-        winning_point = z
-      }
-    }
-    else{
-      if(abs(y) > abs(z)){
-        max = 2
-        winning_point = y
-      }
-      else{
-        max = 3
-        winning_point = z
-      }
-    }
-  max_axis = max
+  arr = array(c(x,y,z))
+  arr_abs = abs(arr)
+  max_idx = which(arr_abs==max(arr_abs))
+  if(arr[max_idx] > 0){
+    max_axis = max_idx
+  }
+  else if(arr[max_idx] < 0){
+    max_axis = max_idx + 3
+  }
+  else{
+    max_axis = -1 
+  }
 }
