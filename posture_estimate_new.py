@@ -3,17 +3,20 @@ Train model & and estimates
 '''
 import scipy as sp
 import socket
-import sys, os
+import sys, os, sched
 import csv, string
 import numpy as np
+import collections as collect
 import MySQLdb
 import datetime
 import extractor
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import confusion_matrix
 
-id = 0
-trigger = False
+
+## system parameters
+id = 5566
+timer_set = False
 n_tree = 18
 window_size = 50
 upload_min = 5
@@ -22,6 +25,8 @@ gry_feature_n = 6
 gry_threshold = 19
 postures = ['supine' , 'left_side' , 'right_side' , 'stomatch' , 'stand']
 votes = np.zeros(5,dtype = 'int')
+cnt = collect.Counter()
+schedule = sched.scheduler ( time.time, time.sleep ) 
 
 def remove_extra(input_data):
     if input_data[0,1] == 'x' and input_data[1,0] == '1':
@@ -38,19 +43,29 @@ def connect2db():
     cursor = conn.cursor()
     return conn, cursor
 
-def write2db(conn,cursor,id,post):
+def write2db(conn,cursor,id):
     start_time = (datetime.datetime.now() - datetime.timedelta(minutes=upload_min)).strftime("%Y-%m-%d %H:%M:%S")
     end_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    post = find_max_in_cnt(cnt)
     print 'Writing to SQL db a data: %d,%s,%s,%d' % (id,start_time,end_time,post)
     cursor.execute("INSERT INTO `sleeping`(`ID`, `Start_t`, `End_t`, `Posture`) VALUES (%d,'%s','%s',%d)" % (id,start_time,end_time,post))
     conn.commit()
     return 0
 
+def find_max_in_cnt(cnt):
+    max_val = 0
+    pos = ''
+    for i in cnt:
+        if cnt[i] > max_val
+        pos = i
+    cnt.clear()
+    return pos
+
 if len(sys.argv) != 3:
     print 'usage: posture_estimates.py [train data file name] [test data file name]'
     sys.exit()
 print 'Connect to SQL sever...'
-# conn, cursor = connect2db()
+conn, cursor = connect2db()
 print 'Connect SQL db success!'
 print 'Loading training data...'
 train_data_name = sys.argv[1]
@@ -63,14 +78,14 @@ test_data_name = sys.argv[2]
 reader = csv.reader(open(test_data_name,'rb'))
 x = list(reader)
 test_data = np.array(x)
+row_n = len(train_data)
+col_n = len(train_data[0,:])
+X = train_data[:,0:acc_featur_n]
+Y = train_data[:,col_n-1]
 X_test = test_data[:,0:acc_featur_n]
 Y_test = test_data[:,-1]
 
-row_n = len(train_data)
-col_n = len(train_data[0,:])
 print 'Training data size: %d row, %d col' % (row_n,col_n)
-X = train_data[:,0:acc_featur_n]
-Y = train_data[:,col_n-1]
 print 'Training process for ACC data: %d X %d ...' % (len(X), len(X[0,:]))
 all_accuracies = np.zeros(50, dtype = float)
 clfs = list()
@@ -129,11 +144,16 @@ while True:
             print 'Disconnect.'
             clientsocket.close()
             break
-        else: # if it is NOT null
-            # print msg
+        else: ## if msg is NOT null
+            if not timer_set :
+                schedule.enter(120,0,write2db,(conn,cursor,id))
+                timer_set = True
             ls = string.split(msg,',')
             ## Star real time predicting
-            test_data = np.array([float(i) for i in ls])
+            try:
+                test_data = np.array([float(i) for i in ls])
+            except ValueError:
+                print 'ValueError. Data lose.'
             print '===================================='
             if(sum(abs(test_data[4:])) > gry_threshold):
                 gry_result = clf_gry.predict(test_data.reshape(1,-1))
@@ -141,28 +161,14 @@ while True:
                 print 'Predict from GYR: %s\nProbability: %s' % (gry_result[0], np.round(prob_gry[0],3))
             acc_result = clf_acc.predict(test_data[:acc_featur_n].reshape(1,-1))
             prob_acc = clf_acc.predict_proba(test_data[:acc_featur_n].reshape(1,-1))
+            ## poling
+            if cnt[acc_result] == 0:
+                cnt[acc_result] = 1
+            else:
+                cnt[acc_result] += 1
             print 'Predict from ACC: %s\nProbability: %s' % (acc_result[0], np.round(prob_acc[0], 3))
             print 'postures:    %s' % (clf_acc.classes_)
             print '====================================='
-            
-            
-            '''
-            ls = string.split(msg,',')
-            test_data = np.array([feature_x,feature_y,feature_z])
-            test_data = test_data.reshape(1,-1)
-            result = clf.predict(test_data)
-            result = result.tolist()
-            print 'Output posture: %s.' % postures[int(result[0])]
-            
-            votes[int(result[0])] += 1
-            if datetime.datetime.now().minute % upload_min == 0 and trigger :
-                post_vote = votes.argmax(axis=0)
-                write2db(conn,cursor,id,post_vote)
-                id += 1
-                trigger = False
-            elif datetime.datetime.now().minute % upload_min != 0:
-                trigger = True
-            '''
 conn.close()
 
 '''

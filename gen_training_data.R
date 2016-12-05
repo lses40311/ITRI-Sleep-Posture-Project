@@ -8,8 +8,8 @@ acc_window_duration = 1 # seconds
 gyo_window_duration = 0.2
 partition_n = round(acc_window_duration/gyo_window_duration)
 gry_last_n = 2
-collor_arr = c("red" , "yellow" ,   "blue" , "green" , "black", "ORANGE")
-postur =     c("left", "x",         "back",  "right",  "stand", "stomach")
+collor_arr = c("red" , "yellow", "blue" , "green" , "black", "ORANGE")
+postur =     c("left", "x",      "back",  "right",  "stand", "stomach")
 
 read_data = read.table("data/testing_data.txt",header=FALSE,sep="," , fill = TRUE)
 names(read_data) = c('time_stamp', 'source', 'type' , 'x' , 'y' , 'z')
@@ -36,7 +36,7 @@ v = c()
 cnt = 0
 last_time_gry = c(rep(c(0,0,0), gry_last_n))
 while(time_ptr < end_time){
-  x = read_data[(time_ptr  <= read_data$time_stamp) & (read_data$time_stamp < (time_ptr +1000)),]
+  x = read_data[(time_ptr  <= read_data$time_stamp) & (read_data$time_stamp < (time_ptr +acc_window_duration*1000)),]
   print(dim(x))
   acc_data = x[x$type== "Acc" & x$source == "wrist",]
   gry_data = x[x$type== "Gry" & x$source == "wrist",]
