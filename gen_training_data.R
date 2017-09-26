@@ -9,9 +9,9 @@ gyo_window_duration = 0.2
 partition_n = round(acc_window_duration/gyo_window_duration)
 gry_last_n = 2
 collor_arr = c("red" , "yellow", "blue" , "green" , "black", "ORANGE")
-postur =     c("left", "x",      "back",  "right",  "stand", "stomach")
+postur =     c("stand", "left",      "back",  "x",  "right", "stomach")
 
-read_data = read.table("data/testing_data.txt",header=FALSE,sep="," , fill = TRUE)
+read_data = read.table("data/raw_data_training2.txt",header=FALSE,sep="," , fill = TRUE)
 names(read_data) = c('time_stamp', 'source', 'type' , 'x' , 'y' , 'z')
 read_data = data.frame(read_data )
 
@@ -22,7 +22,7 @@ read_data = read_data[-(1:start_line),]
 
 read_data[,1] = as.numeric(as.character(read_data[,1]))
 read_data[,1] = read_data[,1] - as.numeric(as.character(read_data[1,1])) ## remove this later
-f<-file("data/training_data_sleep.txt" , "wb")
+f<-file("data/training_data2.txt" , "wb")
 
 n = dim(read_data)[1]
 
@@ -42,9 +42,8 @@ while(time_ptr < end_time){
   gry_data = x[x$type== "Gry" & x$source == "wrist",]
   target = x[x$type== "Acc" & x$source == "chest",] # temple !!
   
-  ## get bidy posture from chest
+  ## get body posture from chest
   output = max_axis(mean(target$x) , mean(target$y) , mean(target$z))
-  # print(output)
   print(output)
   points(cnt,1, col = collor_arr[output] , pch = 20)
   
@@ -53,8 +52,12 @@ while(time_ptr < end_time){
   
   ## calculate gryo data
   gry_len = dim(gry_data)[1]
+  if(gry_len == 0){
+    next()
+  }
   idx = rep(1:partition_n, each = ceiling( gry_len/ partition_n))
   gry_data_split = split(gry_data, idx[1:gry_len])
+  # print(gry_data)
   gry_data_feature = lapply( gry_data_split, function(f) c(mean(f$x) , mean(f$y), mean(f$z)))
   od = get_max_n(gry_data_feature , gry_last_n)
   # print(od)

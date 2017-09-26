@@ -10,6 +10,7 @@ get_max_n = function(l, n){
   #   print(class(i$x))
   #   arr = c(arr, sum(abs(c(i$x , i$y , i$z))))
   # }
+  print(len)
   or = order(unlist(avg) , decreasing=TRUE)[1:n]
   get_max_n = or
 }
