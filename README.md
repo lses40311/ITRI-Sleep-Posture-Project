@@ -1,0 +1,1 @@
+This is a code for the project "Sleep Posture Monitoring System" with ITRI. The user need to wear on two accelerometer sensors in the Training Stage. The sleep posture model will be learn in the Training stage by SVM or Random Forest. 
